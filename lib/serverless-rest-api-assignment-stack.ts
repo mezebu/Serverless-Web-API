@@ -15,19 +15,25 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
 
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewsTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      partitionKey: { name: "id", type: dynamodb.AttributeType.NUMBER },
+      partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
+      sortKey: { name: "rating", type: dynamodb.AttributeType.NUMBER },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       tableName: "MovieReviews",
     });
 
+    movieReviewsTable.addLocalSecondaryIndex({
+      indexName: "reviewer_nameIx",
+      sortKey: { name: "review_name", type: dynamodb.AttributeType.STRING },
+    });
+
     // Functions
-    const getAllMovieReviewsFn = new lambdanode.NodejsFunction(
+    const fetchMovieReviewsFn = new lambdanode.NodejsFunction(
       this,
-      "GetAllMovieReviewsFn",
+      "FetchMovieReviewsFn",
       {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: `${__dirname}/../lambdas/getAllMovieReviews.ts`,
+        entry: `${__dirname}/../lambdas/fetchReviewsByRating.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -42,8 +48,24 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       "AddMovieReviewFn",
       {
         architecture: lambda.Architecture.ARM_64,
-        runtime: lambda.Runtime.NODEJS_16_X,
+        runtime: lambda.Runtime.NODEJS_18_X,
         entry: `${__dirname}/../lambdas/addMovieReview.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: movieReviewsTable.tableName,
+          REGION: "eu-west-1",
+        },
+      }
+    );
+
+    const fetchReviewsByRatingFn = new lambdanode.NodejsFunction(
+      this,
+      "FetchReviewsByRatingFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/fetchReviewsByRating.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -72,8 +94,9 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
     });
 
     // Permissions
-    movieReviewsTable.grantReadData(getAllMovieReviewsFn);
+    movieReviewsTable.grantReadData(fetchMovieReviewsFn);
     movieReviewsTable.grantReadWriteData(newMovieReviewFn);
+    movieReviewsTable.grantReadData(fetchReviewsByRatingFn);
 
     // REST API
     const api = new apig.RestApi(this, "RestAPI", {
@@ -98,7 +121,7 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
     // GET /movies/{movieID}/reviews
     getMovieReviewEndpoint.addMethod(
       "GET",
-      new apig.LambdaIntegration(getAllMovieReviewsFn, { proxy: true })
+      new apig.LambdaIntegration(fetchMovieReviewsFn, { proxy: true })
     );
 
     //POST /movies/reviews
