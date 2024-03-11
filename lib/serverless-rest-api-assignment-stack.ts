@@ -23,7 +23,12 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
 
     movieReviewsTable.addLocalSecondaryIndex({
       indexName: "reviewer_nameIx",
-      sortKey: { name: "review_name", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "reviewer_name", type: dynamodb.AttributeType.STRING },
+    });
+
+    movieReviewsTable.addLocalSecondaryIndex({
+      indexName: "review_dateIx",
+      sortKey: { name: "review_date", type: dynamodb.AttributeType.STRING },
     });
 
     // Functions
@@ -75,6 +80,38 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       }
     );
 
+    const fetchReviewByReviewerFn = new lambdanode.NodejsFunction(
+      this,
+      "FetchReviewByReviewerFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/fetchReviewByReviewer.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: movieReviewsTable.tableName,
+          REGION: "eu-west-1",
+        },
+      }
+    );
+
+    const updateReviewByReviewerFn = new lambdanode.NodejsFunction(
+      this,
+      "UpdateReviewByReviewerFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/updateReviewByReviewer.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: movieReviewsTable.tableName,
+          REGION: "eu-west-1",
+        },
+      }
+    );
+
     new custom.AwsCustomResource(this, "movieReviewsddbInitData", {
       onCreate: {
         service: "DynamoDB",
@@ -97,6 +134,8 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
     movieReviewsTable.grantReadData(fetchMovieReviewsFn);
     movieReviewsTable.grantReadWriteData(newMovieReviewFn);
     movieReviewsTable.grantReadData(fetchReviewsByRatingFn);
+    movieReviewsTable.grantReadData(fetchReviewByReviewerFn);
+    movieReviewsTable.grantReadWriteData(updateReviewByReviewerFn);
 
     // REST API
     const api = new apig.RestApi(this, "RestAPI", {
@@ -117,11 +156,25 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
     const getMovieReviewEndpoint = movieReviewsEndpoint
       .addResource("{movieId}")
       .addResource("reviews");
+    const getReviewByReviewerEndpoint =
+      getMovieReviewEndpoint.addResource("{reviewerName}");
 
     // GET /movies/{movieID}/reviews
     getMovieReviewEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(fetchMovieReviewsFn, { proxy: true })
+    );
+
+    // GET /movies/{movieID}/reviews/{reviewerName}
+    getReviewByReviewerEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(fetchReviewByReviewerFn, { proxy: true })
+    );
+
+    // PUT /movies/{movieID}/reviews/{reviewerName}
+    getReviewByReviewerEndpoint.addMethod(
+      "PUT",
+      new apig.LambdaIntegration(updateReviewByReviewerFn, { proxy: true })
     );
 
     //POST /movies/reviews
