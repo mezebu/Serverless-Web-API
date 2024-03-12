@@ -96,6 +96,22 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       }
     );
 
+    const fetchReviewByNameFn = new lambdanode.NodejsFunction(
+      this,
+      "FetchReviewByNameFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/fetchReviewByName.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: movieReviewsTable.tableName,
+          REGION: "eu-west-1",
+        },
+      }
+    );
+
     const updateReviewByReviewerFn = new lambdanode.NodejsFunction(
       this,
       "UpdateReviewByReviewerFn",
@@ -135,6 +151,7 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
     movieReviewsTable.grantReadWriteData(newMovieReviewFn);
     movieReviewsTable.grantReadData(fetchReviewsByRatingFn);
     movieReviewsTable.grantReadData(fetchReviewByReviewerFn);
+    movieReviewsTable.grantReadData(fetchReviewByNameFn);
     movieReviewsTable.grantReadWriteData(updateReviewByReviewerFn);
 
     // REST API
@@ -151,18 +168,30 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       },
     });
 
-    const movieReviewsEndpoint = api.root.addResource("movies");
-    const addMovieReviewsEndpoint = movieReviewsEndpoint.addResource("reviews");
-    const getMovieReviewEndpoint = movieReviewsEndpoint
+    // Root resources for the endpoints
+    const moviesEndpoint = api.root.addResource("movies");
+    const reviewsEndpoint = api.root.addResource("reviews");
+
+    const addMovieReviewsEndpoint = moviesEndpoint.addResource("reviews");
+    const getMovieReviewEndpoint = moviesEndpoint
       .addResource("{movieId}")
       .addResource("reviews");
     const getReviewByReviewerEndpoint =
       getMovieReviewEndpoint.addResource("{reviewerName}");
 
+    const getReviewByNameEndpoint =
+      reviewsEndpoint.addResource("{reviewerName}");
+
     // GET /movies/{movieID}/reviews
     getMovieReviewEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(fetchMovieReviewsFn, { proxy: true })
+    );
+
+    // GET /reviews/{reviewerName}
+    getReviewByNameEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(fetchReviewByNameFn, { proxy: true })
     );
 
     // GET /movies/{movieID}/reviews/{reviewerName}
