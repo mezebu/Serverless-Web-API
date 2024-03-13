@@ -38,7 +38,7 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: `${__dirname}/../lambdas/fetchReviewsByRating.ts`,
+        entry: `${__dirname}/../lambdas/public/fetchReviewsByRating.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -54,7 +54,7 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: `${__dirname}/../lambdas/addMovieReview.ts`,
+        entry: `${__dirname}/../lambdas/protected/addMovieReview.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -70,7 +70,7 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: `${__dirname}/../lambdas/fetchReviewsByRating.ts`,
+        entry: `${__dirname}/../lambdas/public/fetchReviewsByRating.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -86,7 +86,7 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: `${__dirname}/../lambdas/fetchReviewByReviewer.ts`,
+        entry: `${__dirname}/../lambdas/public/fetchReviewByReviewer.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -102,7 +102,7 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: `${__dirname}/../lambdas/fetchReviewByName.ts`,
+        entry: `${__dirname}/../lambdas/public/fetchReviewByName.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -118,13 +118,26 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_18_X,
-        entry: `${__dirname}/../lambdas/updateReviewByReviewer.ts`,
+        entry: `${__dirname}/../lambdas/protected/updateReviewByReviewer.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
           TABLE_NAME: movieReviewsTable.tableName,
           REGION: "eu-west-1",
         },
+      }
+    );
+
+    // Translation Lambda function
+    const translateReviewFn = new lambdanode.NodejsFunction(
+      this,
+      "TranslateReviewFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/translateReview.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
       }
     );
 
@@ -182,6 +195,11 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
     const getReviewByNameEndpoint =
       reviewsEndpoint.addResource("{reviewerName}");
 
+    // Add translation endpoint
+    const translateReviewEndpoint = getReviewByNameEndpoint
+      .addResource("{movieId}")
+      .addResource("translation");
+
     // GET /movies/{movieID}/reviews
     getMovieReviewEndpoint.addMethod(
       "GET",
@@ -210,6 +228,12 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
     addMovieReviewsEndpoint.addMethod(
       "POST",
       new apig.LambdaIntegration(newMovieReviewFn, { proxy: true })
+    );
+
+    // GET /reviews/{reviewerName}/{movieId}/translation?language=code
+    translateReviewEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(translateReviewFn, { proxy: true })
     );
   }
 }
