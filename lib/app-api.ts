@@ -9,14 +9,13 @@ import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as custom from "aws-cdk-lib/custom-resources";
 import { generateBatch } from "../shared/util";
 import { movieReviews } from "../seed/reviews";
-import { UserPool } from "aws-cdk-lib/aws-cognito";
 
 type AppApiProps = {
   userPoolId: string;
   userPoolClientId: string;
 };
 
-export class AppApi extends Construct {
+export class AppApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AppApiProps) {
     super(scope, id);
 
