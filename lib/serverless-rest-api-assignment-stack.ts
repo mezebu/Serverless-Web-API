@@ -1,8 +1,8 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
-import { AuthApi } from "./auth-api";
-import { AppApi } from "./app-api";
+import { AuthApiStack } from "./auth-api";
+import { AppApiStack } from "./app-api";
 
 export class ServerlessRestApiAssignmentStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -22,12 +22,14 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
 
     const userPoolClientId = appClient.userPoolClientId;
 
-    new AuthApi(this, "AuthServiceApi", {
+    // Create AuthApiStack
+    new AuthApiStack(this, "AuthApiStack", {
       userPoolId: userPoolId,
       userPoolClientId: userPoolClientId,
     });
 
-    new AppApi(this, "AppApi", {
+    // Create AppApiStack
+    new AppApiStack(this, "AppApiStack", {
       userPoolId: userPoolId,
       userPoolClientId: userPoolClientId,
     });
