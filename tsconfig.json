@@ -20,6 +20,7 @@
     "inlineSources": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
+    "forceConsistentCasingInFileNames": true,
     "typeRoots": [
       "./node_modules/@types"
     ]
@@ -29,6 +30,6 @@
     "cdk.out"
   ],
    "include": [
-    "shared/*.json"
+    "shared/*.json",
   ],
 }
