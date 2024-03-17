@@ -1,5 +1,4 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
-import { MovieReviewQueryParams } from "../../shared/types";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
@@ -8,10 +7,14 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import Ajv from "ajv";
 import schema from "../../shared/types.schema.json";
+import {
+  TranslateClient,
+  TranslateTextCommand,
+} from "@aws-sdk/client-translate";
 
 const ajv = new Ajv();
 const isValidQueryParams = ajv.compile(
-  schema.definitions["MovieReviewQueryParams"] || {}
+  schema.definitions["LanguageQueryParams"] || {}
 );
 const ddbDocClient = createDocumentClient();
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
@@ -42,7 +45,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         },
         body: JSON.stringify({
           message: `Incorrect type. Must match Query parameters schema`,
-          schema: schema.definitions["MovieReviewQueryParams"],
+          schema: schema.definitions["LanguageQueryParams"],
         }),
       };
     }
@@ -52,6 +55,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
     const commandInput: QueryCommandInput = {
       TableName: process.env.TABLE_NAME,
+      IndexName: "reviewer_nameIx",
       KeyConditionExpression: "movieId = :m and reviewer_name = :r",
       ExpressionAttributeValues: {
         ":m": movieId,
@@ -63,13 +67,36 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
       new QueryCommand(commandInput)
     );
 
+    if (!commandOutput.Items || commandOutput.Items.length === 0) {
+      return {
+        statusCode: 404,
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ message: "No items found" }),
+      };
+    }
+
+    const content = commandOutput.Items[0].content;
+    const translate = {
+      Text: content,
+      SourceLanguageCode: "en",
+      TargetLanguageCode: language,
+    };
+
+    const translateClient = new TranslateClient({ region: process.env.REGION });
+    const translatedText = await translateClient.send(
+      new TranslateTextCommand(translate)
+    );
+    const translatedData = translatedText.TranslatedText;
+
     return {
       statusCode: 200,
       headers: {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        data: commandOutput.Items,
+        data: translatedData,
       }),
     };
   } catch (error: any) {
