@@ -28,6 +28,19 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         body: JSON.stringify({ message: "Missing query parameters" }),
       };
     }
+    // Check if rating is within the range of 1 to 5
+    const rating = queryParams?.minRating
+      ? parseInt(queryParams.minRating)
+      : undefined;
+    if (rating && (rating < 1 || rating > 5)) {
+      return {
+        statusCode: 400,
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ message: "Rating must be between 1 and 5" }),
+      };
+    }
     if (!isValidQueryParams(queryParams)) {
       return {
         statusCode: 500,
@@ -49,6 +62,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     let commandInput: QueryCommandInput = {
       TableName: process.env.TABLE_NAME,
     };
+
     if ("minRating" in queryParams) {
       commandInput = {
         ...commandInput,
