@@ -9,7 +9,7 @@ This repository contains an implementation of a serverless REST API for the AWS 
 ### API endpoints.
 
 - `POST /movies/reviews`
-  - Description: Add a movie review.
+  - Description: Add a movie review to the database.
 - `GET /movies/{movieId}/reviews`
   - Description: Get all the reviews for the specified movie.
 - `GET /movies/{movieId}/reviews?minRating=n`
