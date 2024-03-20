@@ -31,13 +31,13 @@ This repository contains an implementation of a serverless REST API for the AWS 
 
 ![](./images/api3.png)
 
-### Authentication (if relevant).
+### Authentication
 
 ![](./images/pool1.png)
 
 ![](./images/pool2.png)
 
-### Independent learning (If relevant).
+### Independent learning
 
 Implementing the Infrastructure: Multi-stack app involved several aspects that required independent research and learning:
 
