@@ -14,6 +14,13 @@ const isValidQueryParams = ajv.compile(
   schema.definitions["MovieReviewQueryParams"] || {}
 );
 const ddbDocClient = createDocumentClient();
+
+const headers = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "*",
+};
+
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
     console.log("Event: H", event);
@@ -22,9 +29,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     if (!queryParams) {
       return {
         statusCode: 500,
-        headers: {
-          "content-type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ message: "Missing query parameters" }),
       };
     }
@@ -35,18 +40,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     if (rating && (rating < 1 || rating > 5)) {
       return {
         statusCode: 400,
-        headers: {
-          "content-type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ message: "Rating must be between 1 and 5" }),
       };
     }
     if (!isValidQueryParams(queryParams)) {
       return {
         statusCode: 500,
-        headers: {
-          "content-type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           message: `Incorrect type. Must match Query parameters schema`,
           schema: schema.definitions["MovieReviewQueryParams"],
@@ -86,9 +87,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     );
     return {
       statusCode: 200,
-      headers: {
-        "content-type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         data: commandOutput.Items,
       }),
@@ -97,13 +96,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     console.log(JSON.stringify(error));
     return {
       statusCode: 500,
-      headers: {
-        "content-type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ error }),
     };
   }
 };
+
 function createDocumentClient() {
   const ddbClient = new DynamoDBClient({ region: process.env.REGION });
   const marshallOptions = {
