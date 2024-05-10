@@ -5,6 +5,8 @@ import { AuthApiStack } from "./auth-api";
 import { AppApiStack } from "./app-api";
 import { aws_s3 as s3 } from "aws-cdk-lib";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
+import { CloudFrontWebDistribution } from "aws-cdk-lib/aws-cloudfront";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 
 export class ServerlessRestApiAssignmentStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -16,28 +18,23 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const userPoolId = userPool.userPoolId;
-
     const appClient = userPool.addClient("AppClient", {
       authFlows: { userPassword: true },
     });
 
-    const userPoolClientId = appClient.userPoolClientId;
-
     // Create AuthApiStack
     new AuthApiStack(this, "AuthApiStack", {
-      userPoolId: userPoolId,
-      userPoolClientId: userPoolClientId,
+      userPoolId: userPool.userPoolId,
+      userPoolClientId: appClient.userPoolClientId,
     });
 
     // Create AppApiStack
     new AppApiStack(this, "AppApiStack", {
-      userPoolId: userPoolId,
-      userPoolClientId: userPoolClientId,
+      userPoolId: userPool.userPoolId,
+      userPoolClientId: appClient.userPoolClientId,
     });
 
     const siteBucket = new s3.Bucket(this, "SiteBucket", {
-      publicReadAccess: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
@@ -50,8 +47,31 @@ export class ServerlessRestApiAssignmentStack extends cdk.Stack {
       destinationBucket: siteBucket,
     });
 
-    new cdk.CfnOutput(this, "WebsiteURL", {
-      value: siteBucket.bucketWebsiteUrl,
+    const oai = new cloudfront.OriginAccessIdentity(
+      this,
+      "OriginAccessIdentity"
+    );
+    siteBucket.grantRead(oai);
+
+    const distribution = new CloudFrontWebDistribution(
+      this,
+      "ReactDeploymentDistribution",
+      {
+        originConfigs: [
+          {
+            s3OriginSource: {
+              s3BucketSource: siteBucket,
+              originAccessIdentity: oai,
+            },
+            behaviors: [{ isDefaultBehavior: true }],
+          },
+        ],
+      }
+    );
+
+    new cdk.CfnOutput(this, "CloudFrontDistributionDomainName", {
+      value: distribution.distributionDomainName,
+      description: "CloudFront Distribution Domain Name",
     });
   }
 }
