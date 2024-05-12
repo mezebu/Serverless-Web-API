@@ -8,6 +8,14 @@ import {
 
 const ddbDocClient = createDocumentClient();
 
+const headers = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Accept, X-Requested-With, Authorization",
+};
+
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
     console.log("Event: ", event);
@@ -16,9 +24,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     if (!reviewerName) {
       return {
         statusCode: 400,
-        headers: {
-          "content-type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           message: "Missing reviewerName path parameter",
         }),
@@ -40,9 +46,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "content-type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         data: commandOutput.Items,
       }),
@@ -51,9 +55,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     console.log(JSON.stringify(error));
     return {
       statusCode: 500,
-      headers: {
-        "content-type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ error: error.message }),
     };
   }

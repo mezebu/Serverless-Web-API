@@ -17,6 +17,15 @@ const isValidQueryParams = ajv.compile(
   schema.definitions["LanguageQueryParams"] || {}
 );
 const ddbDocClient = createDocumentClient();
+
+const headers = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Accept, X-Requested-With, Authorization",
+};
+
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
     console.log("Event: ", event);
@@ -31,18 +40,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     ) {
       return {
         statusCode: 400,
-        headers: {
-          "content-type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ message: "Missing required parameters" }),
       };
     }
     if (!isValidQueryParams(queryParams)) {
       return {
         statusCode: 400,
-        headers: {
-          "content-type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           message: `Incorrect type. Must match Query parameters schema`,
           schema: schema.definitions["LanguageQueryParams"],
@@ -70,9 +75,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     if (!commandOutput.Items || commandOutput.Items.length === 0) {
       return {
         statusCode: 404,
-        headers: {
-          "content-type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ message: "No items found" }),
       };
     }
@@ -92,9 +95,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "content-type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         data: translatedData,
       }),
@@ -103,9 +104,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     console.log(JSON.stringify(error));
     return {
       statusCode: 500,
-      headers: {
-        "content-type": "application/json",
-      },
+      headers,
       body: JSON.stringify({ error }),
     };
   }
