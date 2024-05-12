@@ -7,16 +7,13 @@ import * as node from "aws-cdk-lib/aws-lambda-nodejs";
 import * as lambdanode from "aws-cdk-lib/aws-lambda-nodejs";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as custom from "aws-cdk-lib/custom-resources";
-import { generateBatch } from "../shared/util";
-import { movieReviews } from "../seed/reviews";
+import { generateBatch } from "../../shared/util";
+import { movieReviews } from "../../seed/reviews";
 
-type AppApiProps = {
-  userPoolId: string;
-  userPoolClientId: string;
-};
+export class APIApp extends Construct {
+  public readonly apiUrl: string;
 
-export class AppApiStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: AppApiProps) {
+  constructor(scope: Construct, id: string) {
     super(scope, id);
 
     // Main
@@ -59,8 +56,6 @@ export class AppApiStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: "handler",
       environment: {
-        USER_POOL_ID: props.userPoolId,
-        CLIENT_ID: props.userPoolClientId,
         REGION: cdk.Aws.REGION,
         TABLE_NAME: movieReviewsTable.tableName,
       },
@@ -72,7 +67,7 @@ export class AppApiStack extends cdk.Stack {
       "FetchMovieReviewsFn",
       {
         ...appCommonFnProps,
-        entry: `${__dirname}/../lambdas/public/fetchReviewsByRating.ts`,
+        entry: `${__dirname}/../../lambdas/fetchMovieReviews.ts`,
       }
     );
 
@@ -81,7 +76,7 @@ export class AppApiStack extends cdk.Stack {
       "AddMovieReviewFn",
       {
         ...appCommonFnProps,
-        entry: `${__dirname}/../lambdas/protected/addMovieReview.ts`,
+        entry: `${__dirname}/../../lambdas/protected/addMovieReview.ts`,
       }
     );
 
@@ -90,7 +85,7 @@ export class AppApiStack extends cdk.Stack {
       "FetchReviewsByRatingFn",
       {
         ...appCommonFnProps,
-        entry: `${__dirname}/../lambdas/public/fetchReviewsByRating.ts`,
+        entry: `${__dirname}/../../lambdas/public/fetchReviewsByRating.ts`,
       }
     );
 
@@ -99,7 +94,7 @@ export class AppApiStack extends cdk.Stack {
       "FetchReviewByReviewerFn",
       {
         ...appCommonFnProps,
-        entry: `${__dirname}/../lambdas/public/fetchReviewByReviewer.ts`,
+        entry: `${__dirname}/../../lambdas/public/fetchReviewByReviewer.ts`,
       }
     );
 
@@ -108,7 +103,7 @@ export class AppApiStack extends cdk.Stack {
       "FetchReviewByNameFn",
       {
         ...appCommonFnProps,
-        entry: `${__dirname}/../lambdas/public/fetchReviewByName.ts`,
+        entry: `${__dirname}/../../lambdas/public/fetchReviewByName.ts`,
       }
     );
 
@@ -117,7 +112,7 @@ export class AppApiStack extends cdk.Stack {
       "UpdateReviewByReviewerFn",
       {
         ...appCommonFnProps,
-        entry: `${__dirname}/../lambdas/protected/updateReviewByReviewer.ts`,
+        entry: `${__dirname}/../../lambdas/protected/updateReviewByReviewer.ts`,
       }
     );
 
@@ -127,13 +122,13 @@ export class AppApiStack extends cdk.Stack {
       "TranslateReviewFn",
       {
         ...appCommonFnProps,
-        entry: `${__dirname}/../lambdas/public/translateReview.ts`,
+        entry: `${__dirname}/../../lambdas/public/translateReview.ts`,
       }
     );
 
     const authorizerFn = new node.NodejsFunction(this, "AuthorizerFn", {
       ...appCommonFnProps,
-      entry: `${__dirname}/../lambdas/auth/authorizer.ts`,
+      entry: `${__dirname}/../../lambdas/auth/authorizer.ts`,
     });
 
     const requestAuthorizer = new apig.RequestAuthorizer(
@@ -234,5 +229,7 @@ export class AppApiStack extends cdk.Stack {
       "GET",
       new apig.LambdaIntegration(translateReviewFn, { proxy: true })
     );
+
+    this.apiUrl = api.url;
   }
 }

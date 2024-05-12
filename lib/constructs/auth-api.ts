@@ -9,68 +9,51 @@ type AuthApiProps = {
   userPoolClientId: string;
 };
 
-export class AuthApiStack extends cdk.Stack {
+export class AuthApi extends Construct {
+  private auth: apig.IResource;
+  private userPoolId: string;
+  private userPoolClientId: string;
+  public readonly apiUrl: string;
+
   constructor(scope: Construct, id: string, props: AuthApiProps) {
     super(scope, id);
 
-    const { userPoolId, userPoolClientId } = props;
+    ({ userPoolId: this.userPoolId, userPoolClientId: this.userPoolClientId } =
+      props);
 
     const api = new apig.RestApi(this, "AuthServiceApi", {
       description: "Authentication Service RestApi",
       endpointTypes: [apig.EndpointType.REGIONAL],
       defaultCorsPreflightOptions: {
-        allowOrigins: apig.Cors.ALL_ORIGINS,
+        allowHeaders: ["Content-Type", "X-Amz-Date"],
+        allowMethods: ["OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
+        allowCredentials: true,
+        allowOrigins: ["*"],
       },
     });
 
-    const auth = api.root.addResource("auth");
+    this.auth = api.root.addResource("auth");
+
+    this.addAuthRoute("signup", "POST", "SignupFn", "signup.ts");
 
     this.addAuthRoute(
-      auth,
-      "signup",
-      "POST",
-      "SignupFn",
-      "signup.ts",
-      userPoolId,
-      userPoolClientId
-    );
-    this.addAuthRoute(
-      auth,
       "confirm_signup",
       "POST",
       "ConfirmFn",
-      "confirm-signup.ts",
-      userPoolId,
-      userPoolClientId
+      "confirm-signup.ts"
     );
-    this.addAuthRoute(
-      auth,
-      "signout",
-      "GET",
-      "SignoutFn",
-      "signout.ts",
-      userPoolId,
-      userPoolClientId
-    );
-    this.addAuthRoute(
-      auth,
-      "signin",
-      "POST",
-      "SigninFn",
-      "signin.ts",
-      userPoolId,
-      userPoolClientId
-    );
+
+    this.addAuthRoute("signout", "GET", "SignoutFn", "signout.ts");
+    this.addAuthRoute("signin", "POST", "SigninFn", "signin.ts");
+
+    this.apiUrl = api.url;
   }
 
   private addAuthRoute(
-    auth: apig.IResource,
     resourceName: string,
     method: string,
     fnName: string,
-    fnEntry: string,
-    userPoolId: string,
-    userPoolClientId: string
+    fnEntry: string
   ): void {
     const commonFnProps = {
       architecture: lambda.Architecture.ARM_64,
@@ -79,19 +62,18 @@ export class AuthApiStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: "handler",
       environment: {
-        USER_POOL_ID: userPoolId,
-        CLIENT_ID: userPoolClientId,
-        REGION: cdk.Aws.REGION,
+        USER_POOL_ID: this.userPoolId,
+        CLIENT_ID: this.userPoolClientId,
+        REGION: "eu-west-1",
       },
     };
-
-    const resource = auth.addResource(resourceName);
+    const resource = this.auth.addResource(resourceName);
 
     const fn = new node.NodejsFunction(this, fnName, {
       ...commonFnProps,
-      entry: `${__dirname}/../lambdas/auth/${fnEntry}`,
+      entry: `${__dirname}/../../lambdas/auth/${fnEntry}`,
     });
 
-    resource.addMethod(method, new apig.LambdaIntegration(fn));
+    resource.addMethod(method, new apig.LambdaIntegration(fn, { proxy: true }));
   }
 }
