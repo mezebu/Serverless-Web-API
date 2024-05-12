@@ -8,3 +8,9 @@ env.ts
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+.cdk.staging
+cdk.out
+.DS_Store
+site/
+env.ts
+temp.md
