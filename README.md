@@ -1,11 +1,3 @@
-## Serverless REST Assignment.
-
-**Name:** Uchechukwu Henry Ezeigwe
-
-**Video demonstration:**
-
-[URL of my Youtube video demonstration](https://www.youtube.com/watch?v=Fyxg0GJGW1A)
-
 This repository contains an implementation of a serverless REST API for the AWS platform. The CDK framework is used to provision its infrastructure. The API's domain context is movie reviews.
 
 ### API endpoints.
