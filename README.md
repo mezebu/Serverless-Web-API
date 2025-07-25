@@ -31,14 +31,4 @@ This repository contains an implementation of a serverless REST API for the AWS 
 
 ![](./images/pool2.png)
 
-### Independent learning
 
-Implementing the Infrastructure: Multi-stack app involved several aspects that required independent research and learning:
-
-The source files `app-api.ts`, `auth-api.ts`, and `serverless-rest-api-assignment-stack.ts` provide evidence of the independent research and learning involved in implementing these aspects. These files demonstrate how I used various AWS CDK constructs and service packages to define the infrastructure for my multi-stack app.
-
-During my independent research, I utilized the following article as a reference:
-
-[How to Deploy All Stacks in AWS CDK](https://blog.mikaeels.com/how-to-deploy-all-stacks-in-aws-cdk)
-
-I incorporated the knowledge and insights gained from this article into my implementation of the Infrastructure: Multi-stack app.
